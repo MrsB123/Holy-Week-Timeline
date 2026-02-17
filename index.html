@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Holy Week Timeline (Drag & Drop)</title>
+
+  <style>
+    :root{
+      --bg: #f3e6cf;
+      --panel: #ffffff;
+      --border: #d9d9e6;
+      --accent: #6a5acd;
+      --slotBorder: #b9b9c9;
+    }
+
+    body{
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 18px;
+      background: var(--bg);
+      color:#111;
+    }
+
+   h1{
+  margin: 0 0 6px;
+  font-size: 42px;
+  letter-spacing: -0.5px;
+  font-family: "Trebuchet MS", "Gill Sans", Arial, sans-serif;
+}
+
+    .sub{ margin: 0 0 14px; color:#333; font-size: 16px; }
+
+    .panel{
+  background: #e2cfb1;          /* dark sand */
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  margin-bottom: 14px;
+}
+
+    .rowtitle{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight: 900;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    .arrowbadge{
+      font-size: 22px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      background:#eef1ff;
+      border:1px solid #dde2ff;
+      line-height: 1;
+    }
+
+    /* ===== TOP timeline (scroll wrapper + visible arrows) ===== */
+    .timelineWrap{
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .timeline{
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 200px;  /* slimmer boxes */
+      gap: 22px;                 /* room for arrows */
+      align-items: start;
+      padding: 0 10px;           /* space at edges */
+    }
+
+    .slot{
+  border: 3px dashed var(--slotBorder);
+  border-radius: 18px;
+  background: #fff;
+  min-height: 260px;
+  padding: 10px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  overflow: visible;     /* ✅ IMPORTANT: lets arrow show */
+  position: relative;
+}
+
+.slot:not(:last-child)::after{
+  content: "→";
+  position: absolute;
+  right: -18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 26px;
+  font-weight: 900;
+  color:#777;
+  pointer-events: none;
+  z-index: 5;            /* ✅ ensures it shows above */
+}
+
+    /* Arrow between timeline boxes (sits in the GAP) */
+
+    .slot:not(:last-child)::after{
+      content: "→";
+      position: absolute;
+      right: -18px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 26px;
+      font-weight: 900;
+      color:#777;
+      pointer-events: none; /* doesn't block dragging */
+    }
+
+    /* ===== BOTTOM bank (fixed columns so cards don’t resize) ===== */
+    .bankWrap{
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .bank{
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 190px;
+      gap: 12px;
+      align-items: start;
+      padding: 0 10px;
+    }
+
+    .card{
+      width: 100%;
+      user-select:none;
+      background:#f7f7ff;
+      border:2px solid #d7d7ff;
+      border-radius: 16px;
+      padding: 8px;
+      cursor: grab;
+      display: grid;
+      gap: 8px;
+      justify-items: center;
+      box-sizing: border-box;
+    }
+
+    .card:active{ cursor: grabbing; }
+
+    .card img{
+      width: 100%;
+      height: 190px;          /* slimmer overall */
+      object-fit: contain;
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #e6e6e6;
+    }
+
+    .caption{
+      font-weight: 900;
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.25;
+    }
+
+    .slot .card{ width: 100%; }
+
+    .card.correct{ background:#e9ffe9; border-color:#77c977; }
+    .card.wrong{ background:#ffe9e9; border-color:#d36b6b; }
+
+    .controls{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items:center;
+      margin-top: 12px;
+    }
+
+    button{
+      border: none;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 900;
+      cursor: pointer;
+      background: var(--accent);
+      color:#fff;
+    }
+
+    button.ghost{ background:#eee; color:#111; }
+    button.secondary{ background:#444; }
+
+#checkBtn{
+  background: #9fd8b3;   /* pastel green */
+  color: #0f3b22;
+}
+#checkBtn:hover{
+  filter: brightness(0.97);
+}
+
+    .msg{ font-weight: 900; }
+    .msg.ok{ color:#137b13; }
+    .msg.no{ color:#b10f0f; }
+
+    .small{ font-size: 13px; color:#555; margin-top: 8px; }
+
+    @media print{
+      .controls, .sub, .small { display:none !important; }
+      body { background:#fff; }
+      .panel { box-shadow:none; }
+      .timelineWrap, .bankWrap { overflow: visible; }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Holy Week Timeline</h1>
+  <p class="sub">Drag the picture cards into the timeline from left to right. Then press <b>Check</b>.</p>
+
+  <!-- TOP: TIMELINE -->
+  <div class="panel">
+    <div class="rowtitle"><span>Timeline</span><span class="arrowbadge">➡️</span></div>
+
+    <div class="timelineWrap">
+      <div id="timeline" class="timeline" aria-label="Timeline slots"></div>
+    </div>
+
+    <div class="controls">
+      <button id="checkBtn">Check</button>
+      <button id="resetBtn" class="ghost">Reset</button>
+      <button id="shuffleBtn" class="ghost">Shuffle</button>
+      <span id="message" class="msg" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <!-- BOTTOM: PICTURE CARDS -->
+  <div class="panel">
+    <div class="rowtitle"><span>Picture Cards</span></div>
+
+    <div class="bankWrap">
+      <div id="bank" class="bank" aria-label="Event bank"></div>
+    </div>
+
+    <div class="small">Tip: Drag a card back into the Picture Cards row to move it.</div>
+  </div>
+
+<script>
+  // Put images in SAME folder as this HTML file:
+  // palm.png, supper.png, arrest.png, goodfriday.png, tomb.png, easter.png
+
+  const EVENTS = [
+    { id: "palm",   text: "Palm Sunday<br>Jesus arrives in Jerusalem.", img: "palm.png" },
+    { id: "supper", text: "The Last Supper<br>Jesus shares bread and wine with his disciples.", img: "supper.png" },
+    { id: "arrest", text: "Jesus is arrested in the Garden of Gethsemane and taken away.", img: "arrest.png" },
+    { id: "good",   text: "Good Friday<br>Jesus dies on a cross.", img: "goodfriday.png" },
+    { id: "tomb",   text: "Tomb<br>Jesus’ body is placed in a tomb.", img: "tomb.png" },
+    { id: "easter", text: "Easter Sunday<br>Christians believe Jesus rose again.", img: "easter.png" }
+  ];
+
+  const ANSWER_ORDER = EVENTS.map(e => e.id);
+
+  const bank = document.getElementById("bank");
+  const timeline = document.getElementById("timeline");
+  const message = document.getElementById("message");
+
+  function el(tag, attrs = {}, children = []) {
+    const n = document.createElement(tag);
+    Object.entries(attrs).forEach(([k, v]) => {
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else n.setAttribute(k, v);
+    });
+    children.forEach(c => n.appendChild(c));
+    return n;
+  }
+
+  function makeCard(evt) {
+    const img = el("img", { src: evt.img, alt: "" });
+    const caption = el("div", { class: "caption" });
+    caption.innerHTML = evt.text;
+
+    const card = el("div", {
+      class: "card",
+      draggable: "true",
+      "data-id": evt.id,
+      role: "listitem",
+      tabindex: "0",
+      "aria-label": evt.text.replace(/<br>/g, " ")
+    }, [img, caption]);
+
+    card.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", evt.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+
+    return card;
+  }
+
+  function makeSlot() {
+    const slot = el("div", { class: "slot", role: "listitem" });
+    slot.appendChild(el("div", { class: "hint", text: "Drop here" }));
+
+    slot.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      slot.classList.add("dragover");
+    });
+    slot.addEventListener("dragleave", () => slot.classList.remove("dragover"));
+    slot.addEventListener("drop", (e) => {
+      e.preventDefault();
+      slot.classList.remove("dragover");
+      const id = e.dataTransfer.getData("text/plain");
+      if (!id) return;
+      placeIntoSlot(id, slot);
+      clearFeedback();
+    });
+
+    return slot;
+  }
+
+  function placeIntoSlot(id, slot) {
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    if (!card) return;
+
+    const existing = slot.querySelector(".card");
+    if (existing) bank.appendChild(existing);
+
+    const hint = slot.querySelector(".hint");
+    if (hint) hint.remove();
+
+    slot.appendChild(card);
+  }
+
+  function allowBankDrop() {
+    bank.addEventListener("dragover", (e) => e.preventDefault());
+    bank.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const id = e.dataTransfer.getData("text/plain");
+      if (!id) return;
+
+      const card = document.querySelector(`.card[data-id="${id}"]`);
+      if (!card) return;
+
+      const parentSlot = card.closest(".slot");
+      if (parentSlot && !parentSlot.querySelector(".hint")) {
+        parentSlot.appendChild(el("div", { class: "hint", text: "Drop here" }));
+      }
+
+      bank.appendChild(card);
+      clearFeedback();
+    });
+  }
+
+  function getOrder() {
+    return [...timeline.querySelectorAll(".slot")].map(s => {
+      const c = s.querySelector(".card");
+      return c ? c.getAttribute("data-id") : null;
+    });
+  }
+
+  function check() {
+    const order = getOrder();
+    const slots = [...timeline.querySelectorAll(".slot")];
+
+    if (order.some(x => x === null)) {
+      message.textContent = "Fill every timeline box first.";
+      message.className = "msg no";
+      return;
+    }
+
+    let correct = 0;
+    slots.forEach((slot, i) => {
+      const card = slot.querySelector(".card");
+      card.classList.remove("correct", "wrong");
+      if (order[i] === ANSWER_ORDER[i]) { card.classList.add("correct"); correct++; }
+      else { card.classList.add("wrong"); }
+    });
+
+    if (correct === ANSWER_ORDER.length) {
+      message.textContent = "✅ Great! The order is correct.";
+      message.className = "msg ok";
+    } else {
+      message.textContent = `Not quite: ${correct}/${ANSWER_ORDER.length} correct. Try swapping the red ones.`;
+      message.className = "msg no";
+    }
+  }
+
+  function resetAll() {
+    const cards = [...document.querySelectorAll(".card")];
+    bank.innerHTML = "";
+    shuffled(cards).forEach(c => {
+      c.classList.remove("correct","wrong");
+      bank.appendChild(c);
+    });
+
+    [...timeline.querySelectorAll(".slot")].forEach(slot => {
+      slot.innerHTML = "";
+      slot.appendChild(el("div", { class: "hint", text: "Drop here" }));
+    });
+
+    clearFeedback();
+  }
+
+  function shuffleBank() {
+    const cards = [...bank.querySelectorAll(".card")];
+    bank.innerHTML = "";
+    shuffled(cards).forEach(c => bank.appendChild(c));
+    clearFeedback();
+  }
+
+  function clearFeedback() {
+    message.textContent = "";
+    message.className = "msg";
+    [...document.querySelectorAll(".card")].forEach(c => c.classList.remove("correct","wrong"));
+  }
+
+  function shuffled(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function render() {
+    timeline.innerHTML = "";
+    for (let i = 0; i < EVENTS.length; i++) timeline.appendChild(makeSlot());
+
+    bank.innerHTML = "";
+    shuffled([...EVENTS]).forEach(evt => bank.appendChild(makeCard(evt)));
+
+    allowBankDrop();
+    clearFeedback();
+  }
+
+  document.getElementById("checkBtn").addEventListener("click", check);
+  document.getElementById("resetBtn").addEventListener("click", resetAll);
+  document.getElementById("shuffleBtn").addEventListener("click", shuffleBank);
+
+  render();
+</script>
+</body>
+</html>
